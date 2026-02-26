@@ -30,7 +30,10 @@ def on_startup():
 # FIXED CORS: Using "*" and allowing credentials to fix the "Blocked by CORS" error
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://smart-stock-ai-1.onrender.com", # Your frontend URL
+        "http://localhost:5500"                  # For local testing
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
