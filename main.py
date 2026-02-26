@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from database import get_db, Product
+from pydantic import BaseModel  # Added for JSON validation
+from database import get_db, Product, engine, Base
 import ai_agent
 import io
 from reportlab.lib.pagesizes import letter
@@ -11,24 +12,46 @@ from reportlab.lib import colors
 
 app = FastAPI()
 
-# Enable CORS for frontend communication
+# Pydantic model to match the JSON sent by your index.html
+class ProductCreate(BaseModel):
+    name: str
+    qty: int
+    price: float
+
+@app.on_event("startup")
+def on_startup():
+    try:
+        # This creates the tables in Render's PostgreSQL if they don't exist
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables initialized successfully!")
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+
+# FIXED CORS: Using "*" and allowing credentials to fix the "Blocked by CORS" error
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- EXISTING ROUTES (Missing in your logs) ---
 
 @app.get("/inventory")
 def read_root(db: Session = Depends(get_db)):
     return db.query(Product).all()
 
+# FIXED: Now accepts JSON body instead of URL parameters
 @app.post("/add-item")
-def add_item(name: str, qty: int, price: float, db: Session = Depends(get_db)):
-    item = Product(name=name, quantity=qty, price=price)
-    db.add(item)
+def add_item(item: ProductCreate, db: Session = Depends(get_db)):
+    # Check if item already exists to update instead of duplicate
+    db_item = db.query(Product).filter(Product.name == item.name).first()
+    if db_item:
+        db_item.quantity += item.qty
+        db_item.price = item.price
+    else:
+        new_item = Product(name=item.name, quantity=item.qty, price=item.price)
+        db.add(new_item)
+    
     db.commit()
     return {"message": "Success"}
 
@@ -36,8 +59,6 @@ def add_item(name: str, qty: int, price: float, db: Session = Depends(get_db)):
 def ask_ai(question: str, db: Session = Depends(get_db)):
     ai_response_text = ai_agent.get_ai_advice(db, question)
     return {"answer": ai_response_text}
-
-# --- NEW FEATURES ---
 
 @app.delete("/delete-item/{name}")
 def delete_item(name: str, db: Session = Depends(get_db)):
