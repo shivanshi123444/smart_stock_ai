@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Smart-Stock AI Pro | Enterprise Dashboard</title>
+    <style>
+        body { background-color: #0f172a; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-200 p-4 md:p-10 font-sans">
+
+    <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <h1 class="text-3xl font-black bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                Smart-Stock AI Pro
+            </h1>
+            <p class="text-slate-500 text-sm">Enterprise Inventory Ecosystem • v3.0</p>
+        </div>
+        
+        <div class="glass-panel px-6 py-3 rounded-2xl border-l-4 border-emerald-500">
+            <p class="text-xs text-slate-500 uppercase font-bold tracking-widest">Total Stock Value</p>
+            <h2 id="totalValueDisplay" class="text-2xl font-mono text-emerald-400">₹0</h2>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="downloadPDF()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition flex items-center gap-2">
+                <span>📥</span> Export PDF
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 space-y-8">
+            
+            <div class="glass-panel p-6 rounded-3xl shadow-2xl">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span class="text-blue-400">📊</span> Stock Distribution
+                </h2>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-3xl">
+                <div class="flex items-center gap-2 mb-6 text-blue-400 border-b border-slate-700/50 pb-4">
+                    <span class="text-2xl">➕</span>
+                    <h2 class="text-xl font-bold text-white">Add New Inventory</h2>
+                </div>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <input id="prodName" type="text" placeholder="Product Name" class="bg-slate-900/50 border border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition">
+                    <input id="prodQty" type="number" placeholder="Quantity" class="bg-slate-900/50 border border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition">
+                    <input id="prodPrice" type="number" placeholder="Price (₹)" class="bg-slate-900/50 border border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition">
+                </div>
+                <button onclick="addItem()" class="mt-6 w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-10 rounded-xl transition shadow-xl">
+                    Save to Database
+                </button>
+            </div>
+
+            <div class="glass-panel p-6 rounded-3xl">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 class="text-xl font-bold text-white">Live Stock Levels</h2>
+                    <div class="relative w-full md:w-64">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">🔍</span>
+                        <input id="searchInput" type="text" onkeyup="filterTable()" placeholder="Search items..." 
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-full py-2 pl-10 pr-4 text-sm outline-none focus:border-emerald-500 transition">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="inventoryTable">
+                        <thead class="bg-slate-900/80 text-slate-500 text-xs uppercase">
+                            <tr>
+                                <th class="p-4">Product</th>
+                                <th class="p-4">Quantity</th>
+                                <th class="p-4">Price</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryBody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1">
+            <div class="bg-gradient-to-br from-indigo-600 via-blue-600 to-emerald-600 p-1 rounded-[2.5rem] shadow-2xl h-fit sticky top-10">
+                <div class="bg-slate-900 p-8 rounded-[2.3rem]">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-3xl">🤖</span>
+                        <h2 class="text-2xl font-bold text-white uppercase tracking-tight">AI Insights</h2>
+                    </div>
+                    <textarea id="aiQuery" rows="4" 
+                        class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white mb-4 outline-none focus:ring-2 ring-blue-500" 
+                        placeholder="e.g. Which items should I reorder?"></textarea>
+                    
+                    <button onclick="askAI()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-500 transition shadow-xl uppercase">
+                        Consult Agent
+                    </button>
+
+                    <div class="mt-8 p-5 bg-slate-800/50 rounded-2xl border border-slate-700">
+                        <div id="aiResponse" class="text-sm leading-relaxed text-slate-300 italic">Ready to assist...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "https://containing-eligibility-occurs-residents.trycloudflare.com";
+        let stockChart;
+
+        // 1. UPDATE CHART LOGIC
+        function updateChart(data) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            if (stockChart) stockChart.destroy();
+
+            stockChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.name),
+                    datasets: [{
+                        label: 'Quantity',
+                        data: data.map(item => item.quantity),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // 2. FETCH INVENTORY & REFRESH UI
+        async function loadInventory() {
+            try {
+                const response = await fetch(`${API_BASE}/inventory`);
+                const data = await response.json();
+                
+                // Update Total Value Display
+                const total = data.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                document.getElementById('totalValueDisplay').innerText = `₹${total.toLocaleString()}`;
+
+                // Update Table
+                const body = document.getElementById('inventoryBody');
+                body.innerHTML = data.map(item => {
+                    const isLow = item.quantity < 5;
+                    return `
+                    <tr class="hover:bg-slate-800/40 transition inventory-row">
+                        <td class="p-4 font-semibold text-white">${item.name}</td>
+                        <td class="p-4 font-mono ${isLow ? 'text-red-400 font-bold' : 'text-blue-400'}">${item.quantity}</td>
+                        <td class="p-4 text-slate-400">₹${item.price.toLocaleString()}</td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${isLow ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                                ${isLow ? '⚠️ LOW STOCK' : '✅ STABLE'}
+                            </span>
+                        </td>
+                        <td class="p-4 text-right">
+                            <button onclick="deleteItem('${item.name}')" class="text-slate-600 hover:text-red-400 font-bold text-xs uppercase">Delete</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                // Update the Chart
+                updateChart(data);
+
+            } catch (err) { console.error("Load failed", err); }
+        }
+
+        // 3. ACTIONS
+        async function addItem() {
+            const name = document.getElementById('prodName').value;
+            const qty = document.getElementById('prodQty').value;
+            const price = document.getElementById('prodPrice').value;
+            if(!name || !qty || !price) return alert("Fill all fields");
+            
+            await fetch(`${API_BASE}/add-item?name=${encodeURIComponent(name)}&qty=${qty}&price=${price}`, { method: 'POST' });
+            loadInventory();
+            document.getElementById('prodName').value = '';
+            document.getElementById('prodQty').value = '';
+            document.getElementById('prodPrice').value = '';
+        }
+
+        async function deleteItem(name) {
+            if(confirm(`Delete ${name}?`)) {
+                await fetch(`${API_BASE}/delete-item/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                loadInventory();
+            }
+        }
+
+        function filterTable() {
+            const filter = document.getElementById("searchInput").value.toLowerCase();
+            document.querySelectorAll(".inventory-row").forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+            });
+        }
+
+        function downloadPDF() { window.open(`${API_BASE}/export-pdf`, '_blank'); }
+
+        async function askAI() {
+            const query = document.getElementById('aiQuery').value;
+            const respDiv = document.getElementById('aiResponse');
+            if(!query) return;
+            respDiv.innerHTML = `<span class="animate-pulse">Analyzing...</span>`;
+            const res = await fetch(`${API_BASE}/ask-ai?question=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            respDiv.innerText = data.answer;
+        }
+
+        loadInventory();
+    </script>
+</body>
+</html>
