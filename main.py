@@ -28,12 +28,10 @@ def on_startup():
         print(f"❌ Database initialization failed: {e}")
 
 # FIXED CORS: Using "*" and allowing credentials to fix the "Blocked by CORS" error
+# Change allow_origins to specifically name your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://smart-stock-ai-1.onrender.com", # Your frontend URL
-        "http://localhost:5500"                  # For local testing
-    ],
+    allow_origins=["https://smart-stock-ai-1.onrender.com"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
