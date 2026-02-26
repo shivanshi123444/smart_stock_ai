@@ -115,7 +115,7 @@
     </div>
 
     <script>
-        const API_BASE = "https://containing-eligibility-occurs-residents.trycloudflare.com";
+        const API_BASE = "https://smart-stock-ai-zp79.onrender.com";
         let stockChart;
 
         // 1. UPDATE CHART LOGIC
@@ -186,18 +186,38 @@
 
         // 3. ACTIONS
         async function addItem() {
-            const name = document.getElementById('prodName').value;
-            const qty = document.getElementById('prodQty').value;
-            const price = document.getElementById('prodPrice').value;
-            if(!name || !qty || !price) return alert("Fill all fields");
-            
-            await fetch(`${API_BASE}/add-item?name=${encodeURIComponent(name)}&qty=${qty}&price=${price}`, { method: 'POST' });
-            loadInventory();
-            document.getElementById('prodName').value = '';
-            document.getElementById('prodQty').value = '';
-            document.getElementById('prodPrice').value = '';
-        }
+    const nameInput = document.getElementById('prodName');
+    const qtyInput = document.getElementById('prodQty');
+    const priceInput = document.getElementById('prodPrice');
 
+    const name = nameInput.value;
+    const qty = parseInt(qtyInput.value);
+    const price = parseFloat(priceInput.value);
+
+    if(!name || isNaN(qty) || isNaN(price)) return alert("Please fill all fields correctly");
+    
+    // UPDATED: Sending as a JSON Body to match the new Backend
+    const response = await fetch(`${API_BASE}/add-item`, { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: name,
+            qty: qty,
+            price: price
+        })
+    });
+
+    if (response.ok) {
+        loadInventory(); // Refresh the chart and table
+        nameInput.value = '';
+        qtyInput.value = '';
+        priceInput.value = '';
+    } else {
+        alert("Error saving to database. Check console.");
+    }
+}
         async function deleteItem(name) {
             if(confirm(`Delete ${name}?`)) {
                 await fetch(`${API_BASE}/delete-item/${encodeURIComponent(name)}`, { method: 'DELETE' });
@@ -228,3 +248,4 @@
     </script>
 </body>
 </html>
+
